@@ -156,6 +156,12 @@ jobs:
           grep -nE 'APP_NAME: RwLock|RENDEZVOUS_SERVERS:|RS_PUB_KEY:' "$CFG"
           sed -i '/^\[package\.metadata\.bundle\]/,/^\[/ s#^name = "RustDesk"#name = "NuvDesk"#' Cargo.toml
           grep -n 'name = "NuvDesk"' Cargo.toml || true
+          # Windows runner: metadados da versao + titulo da janela
+          RC=flutter/windows/runner/Runner.rc
+          sed -i 's#"Purslane Tech Pte. Ltd."#"Nuvsoft"#g; s#"RustDesk Remote Desktop"#"NuvDesk - Acesso Remoto"#; s#VALUE "ProductName", "RustDesk"#VALUE "ProductName", "NuvDesk"#; s#Purslane Tech Pte. Ltd. All rights reserved.#Nuvsoft. Todos os direitos reservados.#' "$RC"
+          grep -nE 'CompanyName|FileDescription|ProductName|LegalCopyright' "$RC"
+          sed -i 's#std::wstring app_name = L"RustDesk";#std::wstring app_name = L"NuvDesk";#' flutter/windows/runner/main.cpp
+          grep -n 'app_name = L' flutter/windows/runner/main.cpp
 
       - name: Restore bridge files
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
