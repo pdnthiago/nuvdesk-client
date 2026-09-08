@@ -166,6 +166,10 @@ jobs:
           COMMON=flutter/lib/common.dart
           sed -i 's#Widget loadPowered(BuildContext context) {#Widget loadPowered(BuildContext context) { return const SizedBox.shrink();#' "$COMMON"
           grep -n 'Widget loadPowered' "$COMMON"
+          # remove o Toast "Instalacao bem-sucedida!" que o cliente mostra no fim do
+          # --silent-install (so o do silent-install: .text1(&text) sem translate)
+          perl -0pi -e 's/Toast::new\(Toast::POWERSHELL_APP_ID\)\s*\.title\(&config::APP_NAME\.read\(\)\.unwrap\(\)\)\s*\.text1\(&text\)\s*\.sound\(Some\(Sound::Default\)\)\s*\.duration\(Duration::Short\)\s*\.show\(\)\s*\.ok\(\);/let _ = text; \/\/ NuvDesk: sem notificacao pos-instalacao/s' src/core_main.rs
+          grep -n 'NuvDesk: sem notificacao pos-instalacao' src/core_main.rs
 
       - name: NuvDesk icon
         shell: pwsh
