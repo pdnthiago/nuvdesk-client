@@ -162,6 +162,10 @@ jobs:
           grep -nE 'CompanyName|FileDescription|ProductName|LegalCopyright' "$RC"
           sed -i 's#std::wstring app_name = L"RustDesk";#std::wstring app_name = L"NuvDesk";#' flutter/windows/runner/main.cpp
           grep -n 'app_name = L' flutter/windows/runner/main.cpp
+          # tira o "Desenvolvido por RustDesk" (link p/ rustdesk.com) da tela inicial
+          COMMON=flutter/lib/common.dart
+          sed -i 's#Widget loadPowered(BuildContext context) {#Widget loadPowered(BuildContext context) { return const SizedBox.shrink();#' "$COMMON"
+          grep -n 'Widget loadPowered' "$COMMON"
 
       - name: NuvDesk icon
         shell: pwsh
@@ -169,14 +173,18 @@ jobs:
           $ErrorActionPreference = "Stop"
           $magick = (Get-Command magick -ErrorAction SilentlyContinue)?.Source
           if (-not $magick) { choco install imagemagick -y --no-progress | Out-Null; $magick = "magick" }
+          # icone do exe + da janela (Win32 / taskbar / alt-tab)
           & $magick nuvdesk-icon.png -define icon:auto-resize=256,128,96,64,48,32,16 flutter/windows/runner/resources/app_icon.ico
           & $magick nuvdesk-icon.png -define icon:auto-resize=256,128,96,64,48,32,16 res/icon.ico
+          & $magick nuvdesk-icon.png -define icon:auto-resize=256,128,64,48,32,16 res/tray-icon.ico
           & $magick nuvdesk-icon.png -resize 256x256 res/icon.png
           & $magick nuvdesk-icon.png -resize 32x32   res/32x32.png
           & $magick nuvdesk-icon.png -resize 64x64   res/64x64.png
           & $magick nuvdesk-icon.png -resize 128x128 res/128x128.png
           & $magick nuvdesk-icon.png -resize 256x256 "res/128x128@2x.png"
-          Get-Item flutter/windows/runner/resources/app_icon.ico, res/icon.ico, res/icon.png | Select-Object Name,Length
+          # icone desenhado pelo Flutter na barra de titulo interna (loadIcon usa assets/icon.png antes do svg)
+          & $magick nuvdesk-icon.png -resize 256x256 flutter/assets/icon.png
+          Get-Item flutter/windows/runner/resources/app_icon.ico, res/icon.ico, res/tray-icon.ico, res/icon.png, flutter/assets/icon.png | Select-Object Name,Length
 
       - name: Restore bridge files
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
