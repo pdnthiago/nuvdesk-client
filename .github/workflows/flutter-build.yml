@@ -184,6 +184,18 @@ jobs:
           perl -0pi -e 's/if \(bind\.isIncomingOnly\(\)\) \{(\s*)WidgetsBinding\.instance\.addPostFrameCallback/if (true) \{ \/\/ NuvDesk P15$1WidgetsBinding.instance.addPostFrameCallback/s' "$HOME"
           test "$(grep -c 'NuvDesk P15' "$HOME")" = "4" || { echo "P15: patch da home falhou"; exit 1; }
           grep -n 'NuvDesk P15' "$HOME"
+          # O cliente do operador NUNCA lembra senha de dispositivo. Sem isso, depois
+          # de um "Conectar direto" (ou de marcar "Lembrar senha") a senha fica no
+          # peers/<id>.toml e o "Conectar" normal (link SEM senha, que deveria pedir
+          # aceite) passa a entrar direto, reaproveitando-a. A senha do "Conectar
+          # direto" vem sempre no link (password_preset), entao ele nao depende disso.
+          # 1) nao le a senha salva no login; 2) nao grava apos conectar - o else
+          #    desse if ainda APAGA a senha que ja estiver salva de testes antigos.
+          CLIENT=src/client.rs
+          sed -i 's#password = lc.read().unwrap().config.password.clone();#password = Vec::new(); // NuvDesk: nunca reusa senha salva do peer#' "$CLIENT"
+          perl -0pi -e 's/if remember \{(\s*)\/\/ remember is true: use PeerConfig password or ui login/if false \&\& remember { \/\/ NuvDesk: nunca grava senha do peer$1\/\/ remember is true: use PeerConfig password or ui login/' "$CLIENT"
+          test "$(grep -c 'NuvDesk: nunca' "$CLIENT")" = "2" || { echo "patch de senha do peer falhou"; exit 1; }
+          grep -n 'NuvDesk: nunca' "$CLIENT"
 
       - name: NuvDesk icon
         shell: pwsh
