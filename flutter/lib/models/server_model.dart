@@ -31,7 +31,20 @@ class ServerModel with ChangeNotifier {
   bool _fileOk = false;
   bool _clipboardOk = false;
   bool _showElevation = false;
-  bool hideCm = false;
+  // NuvDesk: a janela do gerenciador de conexoes fica oculta enquanto a unica
+  // coisa em andamento for transferencia de arquivo. O painel abre transferencia
+  // em segundo plano (3 pontinhos > Transferir) e nada deve aparecer na tela do
+  // cliente. Sessao de tela continua mostrando a janela - e o pedido de
+  // autorizacao - normalmente.
+  bool _hideCmConfig = false;
+  bool get hideCm =>
+      _hideCmConfig ||
+      (_clients.isNotEmpty &&
+          // Autorizado: veio com a senha certa do painel, ninguem precisa clicar
+          // em nada. Se faltar autorizacao a janela aparece - senao o cliente
+          // nunca teria como aceitar.
+          _clients.every((c) => c.isFileTransfer && c.authorized));
+  set hideCm(bool value) => _hideCmConfig = value;
   int _connectStatus = 0; // Rendezvous Server status
   String _verificationMethod = "";
   String _temporaryPasswordLength = "";

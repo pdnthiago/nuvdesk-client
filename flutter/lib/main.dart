@@ -289,13 +289,13 @@ void runConnectionManagerScreen() async {
     const DesktopServerPage(),
     MyTheme.currentThemeMode(),
   );
-  final hide = await bind.cmGetConfig(name: "hide_cm") == 'true';
-  gFFI.serverModel.hideCm = hide;
-  if (hide) {
-    await hideCmWindow(isStartup: true);
-  } else {
-    await showCmWindow(isStartup: true);
-  }
+  gFFI.serverModel.hideCm = await bind.cmGetConfig(name: "hide_cm") == 'true';
+  // NuvDesk: sobe sempre oculta. Quem manda mostrar e o ServerModel, assim que
+  // souber o tipo da conexao (o tipo so chega pelo IPC Login, depois da janela
+  // existir). Transferencia de arquivo em segundo plano nao pisca nada na tela
+  // do cliente; sessao de tela aparece normalmente (ver hideCm em
+  // models/server_model.dart).
+  await hideCmWindow(isStartup: true);
   setResizable(false);
   // Start the uni links handler and redirect links to Native, not for Flutter.
   listenUniLinks(handleByFlutter: false);
@@ -321,6 +321,9 @@ showCmWindow({bool isStartup = false}) async {
   } else if (_isCmReadyToShow) {
     if (await windowManager.getOpacity() != 1) {
       await windowManager.setOpacity(1);
+      // NuvDesk: a janela sobe escondida (hide()), entao precisa de show()
+      // antes do foco - so opacidade nao traz de volta uma janela oculta.
+      await windowManager.show();
       await windowManager.focus();
       await windowManager.minimize(); //needed
       await windowManager.setSizeAlignment(
