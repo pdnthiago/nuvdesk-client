@@ -32,10 +32,11 @@ class ServerModel with ChangeNotifier {
   bool _clipboardOk = false;
   bool _showElevation = false;
   // NuvDesk: a janela do gerenciador de conexoes fica oculta enquanto o que
-  // estiver em andamento for so trabalho de bastidor - transferencia de arquivo
-  // ou terminal. O painel abre os dois pelos 3 pontinhos, em segundo plano, e
-  // nada deve aparecer na tela do cliente. Sessao de TELA continua mostrando a
-  // janela - e o pedido de autorizacao - normalmente.
+  // estiver em andamento for so trabalho de bastidor - transferencia de arquivo,
+  // terminal ou a aba "Visualizar tela" (que entra com disable_keyboard e nao
+  // digita nem clica). O painel abre os tres pelos 3 pontinhos, em segundo
+  // plano. Sessao de CONTROLE continua mostrando a janela - e o pedido de
+  // autorizacao - normalmente.
   bool _hideCmConfig = false;
   bool get hideCm =>
       _hideCmConfig ||
@@ -43,7 +44,9 @@ class ServerModel with ChangeNotifier {
           // Autorizado: veio com a senha certa do painel, ninguem precisa clicar
           // em nada. Se faltar autorizacao a janela aparece - senao o cliente
           // nunca teria como aceitar.
-          _clients.every((c) => (c.isFileTransfer || c.isTerminal) && c.authorized));
+          _clients.every((c) =>
+              (c.isFileTransfer || c.isTerminal || c.chegouSemTeclado) &&
+              c.authorized));
   set hideCm(bool value) => _hideCmConfig = value;
   int _connectStatus = 0; // Rendezvous Server status
   String _verificationMethod = "";
@@ -837,10 +840,19 @@ class Client {
   Client(this.id, this.authorized, this.isFileTransfer, this.isViewCamera,
       this.name, this.peerId, this.keyboard, this.clipboard, this.audio);
 
+  /// NuvDesk: a conexao CHEGOU sem teclado (so visualizacao).
+  ///
+  /// Separado de [keyboard] de proposito: aquele muda quando o usuario mexe no
+  /// interruptor do gerenciador de conexoes. Se a decisao de esconder a janela
+  /// dependesse dele, desligar o teclado ali faria a janela sumir - e nao teria
+  /// como liga-lo de novo.
+  bool chegouSemTeclado = false;
+
   Client.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     authorized = json['authorized'];
     isFileTransfer = json['is_file_transfer'];
+    chegouSemTeclado = json['keyboard'] == false;
     // TODO: no entry then default.
     isViewCamera = json['is_view_camera'];
     isTerminal = json['is_terminal'] ?? false;

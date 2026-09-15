@@ -2197,7 +2197,11 @@ impl Connection {
             name,
             avatar: self.lr.avatar.clone(),
             authorized,
-            keyboard: self.keyboard,
+            // NuvDesk: o EFETIVO, nao so a permissao. Um cliente que entrou com
+            // disable_keyboard (a aba "Visualizar tela" do painel) nao digita nem
+            // clica, e o gerenciador de conexoes precisa saber disso - tanto pra
+            // mostrar certo quanto pra decidir se aparece na tela do usuario.
+            keyboard: self.peer_keyboard_enabled(),
             clipboard: self.clipboard,
             audio: self.audio,
             file: self.file,
