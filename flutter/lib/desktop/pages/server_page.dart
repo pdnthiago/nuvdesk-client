@@ -483,21 +483,29 @@ class _CmHeaderState extends State<_CmHeader>
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // NuvDesk: o painel manda "Nome Fantasia · Usuario". Numa linha so,
+                // o FittedBox encolhia tudo ate ficar miudo; aqui cada parte tem a
+                // sua linha e so diminui se aquela linha nao couber.
+                ..._nuvdeskNomeEmLinhas(client.name).map((linha) => FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        linha.texto,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight:
+                              linha.destaque ? FontWeight.bold : FontWeight.w500,
+                          fontSize: linha.destaque ? 20 : 17,
+                        ),
+                        maxLines: 1,
+                      ),
+                    )),
                 FittedBox(
-                    child: Text(
-                  client.name,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  maxLines: 1,
-                )),
-                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
                   child: Text(
-                    "(${client.peerId})",
-                    style: TextStyle(color: Colors.white, fontSize: 14),
+                    client.peerId,
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ),
                 if (client.type_() == ClientType.terminal)
@@ -1460,4 +1468,22 @@ class __FileTransferLogPageState extends State<_FileTransferLogPage> {
           )),
     );
   }
+}
+
+class _NuvdeskLinhaNome {
+  final String texto;
+  final bool destaque;
+  const _NuvdeskLinhaNome(this.texto, this.destaque);
+}
+
+/// "Empresa · Usuario" vira duas linhas; nome sem separador fica numa so.
+List<_NuvdeskLinhaNome> _nuvdeskNomeEmLinhas(String nome) {
+  final i = nome.lastIndexOf(' · ');
+  if (i <= 0) return [_NuvdeskLinhaNome(nome, true)];
+  final empresa = nome.substring(0, i).trim();
+  final usuario = nome.substring(i + 3).trim();
+  return [
+    _NuvdeskLinhaNome(empresa, true),
+    if (usuario.isNotEmpty) _NuvdeskLinhaNome(usuario, false),
+  ];
 }
