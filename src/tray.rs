@@ -39,6 +39,10 @@ fn make_tray() -> hbb_common::ResultType<()> {
         return Ok(());
     }
 
+    // NuvDesk (P04): vigia do chat. Depois da trava acima = uma vigia por sessao.
+    #[cfg(windows)]
+    std::thread::spawn(vigiar_chat_nuvdesk);
+
     let icon;
     #[cfg(target_os = "macos")]
     {
@@ -314,4 +318,69 @@ fn load_icon_from_asset() -> Option<image::DynamicImage> {
         }
     }
     None
+}
+
+// ---------------------------------------------------------------------------
+// NuvDesk (P04): chat com o suporte.
+//
+// A bandeja roda o tempo todo na sessao do usuario, com ou sem a janela do
+// NuvDesk aberta. A cada 15s ela pergunta a API se o tecnico mandou mensagem
+// nao lida; se sim, abre a janela (o chat dentro dela mostra a conversa).
+// Com a janela aberta, quem traz as mensagens na hora e o proprio chat (long
+// polling); aqui basta abrir. A mesma mensagem nao abre a janela duas vezes:
+// se a pessoa fechar sem ler, so reabre quando chegar outra.
+//
+// Credencial: a mesma do heartbeat, gravada pelo instalador em
+// %ProgramData%\NuvDesk\state.json (api, machine_id, agent_token).
+#[cfg(windows)]
+fn ler_estado_nuvdesk() -> Option<(String, String, String)> {
+    let base = std::env::var("ProgramData").ok()?;
+    let caminho = std::path::Path::new(&base).join("NuvDesk").join("state.json");
+    let texto = std::fs::read_to_string(caminho).ok()?;
+    // O PowerShell grava com BOM as vezes.
+    let v: serde_json::Value = serde_json::from_str(texto.trim_start_matches('\u{feff}')).ok()?;
+    let api = v["api"].as_str()?.trim_end_matches('/').to_owned();
+    let maquina = v["machine_id"].as_str()?.to_owned();
+    let token = v["agent_token"].as_str()?.to_owned();
+    if api.is_empty() || maquina.is_empty() || token.is_empty() {
+        return None;
+    }
+    Some((api, maquina, token))
+}
+
+#[cfg(windows)]
+fn vigiar_chat_nuvdesk() {
+    let mut ultima_aberta: i64 = 0;
+    loop {
+        std::thread::sleep(Duration::from_secs(15));
+        let Some((api, maquina, token)) = ler_estado_nuvdesk() else {
+            continue;
+        };
+        // after_id alto: nao precisa das mensagens, so do resumo.
+        let corpo = serde_json::json!({
+            "machine_id": maquina,
+            "agent_token": token,
+            "after_id": 9_007_199_254_740_991i64,
+            "wait": false,
+        })
+        .to_string();
+        let url = format!("{}/api/v1/agent/chat/sync", api);
+        let resposta = match crate::common::post_request_sync(url, corpo, "Content-Type: application/json") {
+            Ok(r) => r,
+            Err(e) => {
+                log::debug!("nuvdesk chat: falha ao consultar: {e}");
+                continue;
+            }
+        };
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(&resposta) else {
+            continue;
+        };
+        let nao_lida = v["ultima_nao_lida_id"].as_i64().unwrap_or(0);
+        if nao_lida > ultima_aberta {
+            log::info!("nuvdesk chat: mensagem do suporte, abrindo a janela");
+            // Sem argumentos: se a janela ja existe, o runner so a traz pra frente.
+            crate::run_me::<&str>(vec![]).ok();
+            ultima_aberta = nao_lida;
+        }
+    }
 }

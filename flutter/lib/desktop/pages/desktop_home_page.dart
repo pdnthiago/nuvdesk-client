@@ -24,6 +24,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
 import '../widgets/button.dart';
+import '../widgets/nuvdesk_chat.dart';
 
 class DesktopHomePage extends StatefulWidget {
   const DesktopHomePage({Key? key}) : super(key: key);
@@ -110,6 +111,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           }
         },
       ),
+      // NuvDesk (P04): chat com o suporte. Abrir/fechar muda a altura do painel,
+      // e a janela acompanha.
+      NuvDeskChat(onMudouTamanho: () {
+        if (isInHomePage()) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            _updateWindowSize();
+          });
+        }
+      }),
     ];
     if (isIncomingOnly) {
       children.addAll([
