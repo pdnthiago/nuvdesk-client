@@ -129,12 +129,18 @@ dev_dependencies:
 dependency_overrides:
   intl: ^0.19.0
   flutter_plugin_android_lifecycle: 2.0.17
-  # NuvDesk: record 5.1.2 puxa record_linux 0.7.2, incompativel com
-  # record_platform_interface 1.6 (quebra o build ate no Windows). 1.3.1 exige
-  # Dart >=3.5, incompativel com o job generate_bridge (Dart 3.4.4) - 1.1.1
-  # ainda aceita platform_interface ate <2.0.0 (cobre a 1.6.x) e pede so
-  # Dart ^3.4.0.
+  # NuvDesk: sem fixar os dois juntos, cada job resolve uma combinacao
+  # diferente e quebra em um dos dois lugares:
+  # - generate_bridge (Dart 3.4.4) exige record_linux <=1.1.1 (so aceita
+  #   Dart ^3.4.0).
+  # - o job Windows (Flutter 3.24.5) resolve record_platform_interface pra
+  #   1.6.x sozinho, que muda a assinatura de hasPermission (ganha o
+  #   parametro {request}) - record_linux 1.1.1 nao implementa esse
+  #   parametro e o build C++/CMake quebra.
+  # Fixando as duas na versao de ANTES dessa mudanca (a interface so muda em
+  # 1.4.0+) os dois jobs resolvem a mesma combinacao compativel.
   record_linux: 1.1.1
+  record_platform_interface: 1.3.0
 
 # rerun: flutter pub run flutter_launcher_icons
 flutter_icons:
