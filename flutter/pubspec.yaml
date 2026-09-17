@@ -73,6 +73,10 @@ dependencies:
   scroll_pos: ^0.4.0
   debounce_throttle: ^2.0.0
   file_picker: ^5.1.0
+  # NuvDesk chat: gravar audio (P106), tocar audio e sons (P106/P108), colar print (P104).
+  record: ^5.1.2
+  audioplayers: ^6.1.0
+  pasteboard: ^0.2.0
   flutter_svg: ^2.0.5
   uni_links:
     git:

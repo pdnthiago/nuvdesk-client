@@ -61,13 +61,19 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     super.build(context);
     final isIncomingOnly = bind.isIncomingOnly();
     return _buildBlock(
-        child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        buildLeftPane(context),
-        if (!isIncomingOnly) const VerticalDivider(width: 1),
-        if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
-      ],
+        // NuvDesk P103: com o chat aberto, ele ocupa a direita da janela.
+        child: ListenableBuilder(
+      listenable: nuvdeskChat,
+      builder: (context, _) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          buildLeftPane(context),
+          if (!isIncomingOnly && !nuvdeskChat.aberto) const VerticalDivider(width: 1),
+          if (!isIncomingOnly && !nuvdeskChat.aberto) Expanded(child: buildRightPane(context)),
+          if (nuvdeskChat.aberto) const VerticalDivider(width: 1),
+          if (nuvdeskChat.aberto) const Expanded(child: NuvDeskChatPainel()),
+        ],
+      ),
     ));
   }
 
@@ -111,15 +117,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           }
         },
       ),
-      // NuvDesk (P04): chat com o suporte. Abrir/fechar muda a altura do painel,
-      // e a janela acompanha.
-      NuvDeskChat(onMudouTamanho: () {
-        if (isInHomePage()) {
-          Future.delayed(const Duration(milliseconds: 100), () {
-            _updateWindowSize();
-          });
-        }
-      }),
+      // NuvDesk (P04/P103): botao do chat; a conversa abre no painel da direita.
+      const NuvDeskChatBotao(),
     ];
     if (isIncomingOnly) {
       children.addAll([
@@ -858,6 +857,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         _updateWindowSize();
       });
     }
+    // NuvDesk P103: abrir/fechar o chat redimensiona a janela.
+    nuvdeskChat.aoMudarTamanho = () {
+      if (isInHomePage()) {
+        Future.delayed(const Duration(milliseconds: 60), () {
+          if (mounted) _updateWindowSize();
+        });
+      }
+    };
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -867,7 +874,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       return;
     }
     if (renderObject is RenderBox) {
-      final size = renderObject.size;
+      var size = renderObject.size;
+      // NuvDesk P103: chat aberto = janela mais larga e alta, pra ler com folga.
+      if (nuvdeskChat.aberto) {
+        size = Size(size.width + 560, size.height < 680 ? 680 : size.height);
+      }
       if (size != imcomingOnlyHomeSize) {
         imcomingOnlyHomeSize = size;
         windowManager.setSize(getIncomingOnlyHomeSize());
