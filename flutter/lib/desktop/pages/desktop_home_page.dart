@@ -118,7 +118,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         },
       ),
       // NuvDesk (P04/P103): botao do chat; a conversa abre no painel da direita.
-      const NuvDeskChatBotao(),
+      // Sem instalacao (NuvDesk Rapido) ele fica apagado: nao ha maquina
+      // cadastrada pra conversa pertencer.
+      NuvDeskChatBotao(instalado: bind.mainIsInstalled()),
     ];
     if (isIncomingOnly) {
       children.addAll([
