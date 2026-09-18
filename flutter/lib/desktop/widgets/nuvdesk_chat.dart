@@ -802,6 +802,7 @@ class _NuvDeskChatPainelState extends State<NuvDeskChatPainel> {
   }
 
   void _inserirEmoji(String emoji) {
+    setState(() => _emojiAberto = false);
     final sel = _texto.selection;
     final inicio = sel.isValid ? sel.start : _texto.text.length;
     final fim = sel.isValid ? sel.end : _texto.text.length;
@@ -879,12 +880,12 @@ class _NuvDeskChatPainelState extends State<NuvDeskChatPainel> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!meu && m.autor.isNotEmpty)
-              Text(m.autor, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _azul)),
+              Text(m.autor, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: _azul)),
             if (m.anexoId != null) _anexo(m),
-            if (m.texto.isNotEmpty) SelectableText(m.texto, style: const TextStyle(fontSize: 13.5, height: 1.3)),
+            if (m.texto.isNotEmpty) SelectableText(m.texto, style: const TextStyle(fontSize: 12.5, height: 1.25)),
             Align(
               alignment: Alignment.centerRight,
-              child: Text(_hora(m.criada), style: const TextStyle(fontSize: 10, color: Colors.black45)),
+              child: Text(_hora(m.criada), style: const TextStyle(fontSize: 9.5, color: Colors.black45)),
             ),
           ],
         ),
