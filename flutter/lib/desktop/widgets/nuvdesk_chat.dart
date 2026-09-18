@@ -219,11 +219,24 @@ class NuvDeskChatControle extends ChangeNotifier {
       notifyListeners();
       aoMudarTamanho?.call();
     }
-    if (trazerJanela) {
-      windowManager.show();
-      windowManager.focus();
-    }
+    if (trazerJanela) _trazerParaFrente();
     marcarLidas();
+  }
+
+  // P110: o Windows recusa SetForegroundWindow vindo de processo que nao esta em
+  // primeiro plano - show()+focus() sozinhos so faziam piscar a barra de tarefas
+  // quando o cliente estava em outro programa. Deixar a janela topmost por um
+  // instante contorna a restricao; e a unica saida sem escrever codigo nativo.
+  // O topmost sai logo depois pra janela nao ficar colada na frente de tudo.
+  Future<void> _trazerParaFrente() async {
+    try {
+      if (await windowManager.isMinimized()) await windowManager.restore();
+      await windowManager.show();
+      await windowManager.setAlwaysOnTop(true);
+      await windowManager.focus();
+      await Future.delayed(const Duration(milliseconds: 400));
+      await windowManager.setAlwaysOnTop(false);
+    } catch (_) {}
   }
 
   void fechar() {
@@ -520,6 +533,19 @@ class _NuvDeskChatPainelState extends State<NuvDeskChatPainel> {
   final _rolagem = ScrollController();
   final _foco = FocusNode();
   int _qtdAnterior = 0;
+  bool _emojiAberto = false;
+
+  // P110: lista curta e fixa em vez de um pacote de emoji - o build ja quebrou
+  // duas vezes por conflito de dependencia, e pra descontrair uma conversa de
+  // suporte isso basta. Emoji e texto Unicode: nao precisa de biblioteca.
+  static const _emojis = [
+    '😀', '😃', '😄', '😁', '😊', '😉', '🙂', '😌',
+    '😍', '🥰', '🤗', '🤔', '🤝', '🙏', '👍', '👌',
+    '👏', '💪', '🎉', '✨', '🔥', '⭐', '❤️', '😅',
+    '😂', '🤣', '😇', '😎', '🥳', '😴', '🤓', '😐',
+    '😕', '😟', '😢', '😭', '😤', '😱', '🤯', '👋',
+    '✅', '❌', '⚠️', '💡', '📎', '🖥️', '⏰', '🚀',
+  ];
 
   @override
   void initState() {
@@ -626,108 +652,181 @@ class _NuvDeskChatPainelState extends State<NuvDeskChatPainel> {
   }
 
   Widget _barraDeEscrita(NuvDeskChatControle c) {
-    final gravando = c.gravandoDesde != null;
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 8, 10, 10),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
       decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFD9E0E8)))),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: gravando
-            ? [
-                IconButton(
-                  tooltip: 'Descartar áudio',
-                  icon: const Icon(Icons.delete_outline, color: Color(0xFFB42318)),
-                  onPressed: () => c.pararGravacao(enviar: false),
-                ),
-                Expanded(
-                  child: Container(
-                    height: 44,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF5F5),
-                      border: Border.all(color: const Color(0xFFFECDCA)),
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.fiber_manual_record, color: Color(0xFFD92D20), size: 14),
-                        const SizedBox(width: 8),
-                        Text('Gravando ${_duracao(DateTime.now().difference(c.gravandoDesde!))}',
-                            style: const TextStyle(color: Color(0xFFB42318), fontWeight: FontWeight.w600)),
-                        const Spacer(),
-                        const Text('máx. 5:00', style: TextStyle(color: Colors.black45, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                ),
+      child: c.gravandoDesde != null ? _linhaGravando(c) : _linhaEscrita(c),
+    );
+  }
+
+  Widget _linhaGravando(NuvDeskChatControle c) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        IconButton(
+          tooltip: 'Descartar áudio',
+          icon: const Icon(Icons.delete_outline, color: Color(0xFFB42318)),
+          onPressed: () => c.pararGravacao(enviar: false),
+        ),
+        Expanded(
+          child: Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF5F5),
+              border: Border.all(color: const Color(0xFFFECDCA)),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.fiber_manual_record, color: Color(0xFFD92D20), size: 14),
                 const SizedBox(width: 8),
-                _botaoRedondo(icone: Icons.send, dica: 'Enviar áudio', aoTocar: () => c.pararGravacao(enviar: true)),
-              ]
-            : [
-                IconButton(
-                  tooltip: 'Enviar arquivo (ou cole um print com Ctrl+V)',
-                  icon: const Icon(Icons.attach_file),
-                  onPressed: c.enviando ? null : c.escolherArquivo,
-                ),
-                Expanded(
-                  child: Focus(
-                    onKeyEvent: (node, evento) {
-                      if (evento is! KeyDownEvent) return KeyEventResult.ignored;
-                      final ctrl = HardwareKeyboard.instance.isControlPressed;
-                      // P104: Ctrl+V com imagem/arquivo na area de transferencia.
-                      if (ctrl && evento.logicalKey == LogicalKeyboardKey.keyV) {
-                        c.colar().then((tratado) {
-                          if (!tratado) {
-                            Clipboard.getData(Clipboard.kTextPlain).then((d) {
-                              final t = d?.text;
-                              if (t == null || t.isEmpty) return;
-                              final sel = _texto.selection;
-                              final inicio = sel.isValid ? sel.start : _texto.text.length;
-                              final fim = sel.isValid ? sel.end : _texto.text.length;
-                              _texto.value = TextEditingValue(
-                                text: _texto.text.replaceRange(inicio, fim, t),
-                                selection: TextSelection.collapsed(offset: inicio + t.length),
-                              );
-                            });
-                          }
-                        });
-                        return KeyEventResult.handled;
-                      }
-                      // Enter envia; Shift+Enter quebra linha.
-                      if ((evento.logicalKey == LogicalKeyboardKey.enter ||
-                              evento.logicalKey == LogicalKeyboardKey.numpadEnter) &&
-                          !HardwareKeyboard.instance.isShiftPressed) {
-                        _enviarTexto();
-                        return KeyEventResult.handled;
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: TextField(
-                      controller: _texto,
-                      focusNode: _foco,
-                      minLines: 1,
-                      maxLines: 5,
-                      maxLength: 4000,
-                      style: const TextStyle(fontSize: 15),
-                      decoration: InputDecoration(
-                        hintText: 'Escreva uma mensagem',
-                        counterText: '',
-                        isDense: true,
-                        filled: true,
-                        fillColor: const Color(0xFFF5F7FA),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // P106: vazio = microfone; com texto = enviar.
-                _texto.text.trim().isEmpty
-                    ? _botaoRedondo(icone: Icons.mic, dica: 'Gravar áudio', aoTocar: c.enviando ? null : c.comecarGravacao)
-                    : _botaoRedondo(icone: Icons.send, dica: 'Enviar', aoTocar: c.enviando ? null : _enviarTexto),
+                Text('Gravando ${_duracao(DateTime.now().difference(c.gravandoDesde!))}',
+                    style: const TextStyle(color: Color(0xFFB42318), fontWeight: FontWeight.w600)),
+                const Spacer(),
+                const Text('máx. 5:00', style: TextStyle(color: Colors.black45, fontSize: 12)),
               ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        _botaoRedondo(icone: Icons.send, dica: 'Enviar áudio', aoTocar: () => c.pararGravacao(enviar: true)),
+      ],
+    );
+  }
+
+  // P110: campo de texto sozinho em cima, acoes numa linha embaixo (clipe,
+  // emoji, e o botao de microfone/enviar na direita) - antes tudo dividia a
+  // mesma linha e sobrava pouco espaco pra escrever.
+  Widget _linhaEscrita(NuvDeskChatControle c) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_emojiAberto) _painelEmoji(),
+        Focus(
+          onKeyEvent: (node, evento) {
+            if (evento is! KeyDownEvent) return KeyEventResult.ignored;
+            final ctrl = HardwareKeyboard.instance.isControlPressed;
+            // P104: Ctrl+V com imagem/arquivo na area de transferencia.
+            if (ctrl && evento.logicalKey == LogicalKeyboardKey.keyV) {
+              c.colar().then((tratado) {
+                if (!tratado) {
+                  Clipboard.getData(Clipboard.kTextPlain).then((d) {
+                    final t = d?.text;
+                    if (t == null || t.isEmpty) return;
+                    final sel = _texto.selection;
+                    final inicio = sel.isValid ? sel.start : _texto.text.length;
+                    final fim = sel.isValid ? sel.end : _texto.text.length;
+                    _texto.value = TextEditingValue(
+                      text: _texto.text.replaceRange(inicio, fim, t),
+                      selection: TextSelection.collapsed(offset: inicio + t.length),
+                    );
+                  });
+                }
+              });
+              return KeyEventResult.handled;
+            }
+            // Enter envia; Shift+Enter quebra linha.
+            if ((evento.logicalKey == LogicalKeyboardKey.enter ||
+                    evento.logicalKey == LogicalKeyboardKey.numpadEnter) &&
+                !HardwareKeyboard.instance.isShiftPressed) {
+              _enviarTexto();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: TextField(
+            controller: _texto,
+            focusNode: _foco,
+            minLines: 1,
+            maxLines: 5,
+            maxLength: 4000,
+            style: const TextStyle(fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Escreva uma mensagem',
+              counterText: '',
+              isDense: true,
+              filled: true,
+              fillColor: const Color(0xFFF5F7FA),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            _botaoBarra(
+              icone: Icons.attach_file,
+              dica: 'Enviar arquivo (ou cole um print com Ctrl+V)',
+              aoTocar: c.enviando ? null : c.escolherArquivo,
+            ),
+            _botaoBarra(
+              icone: Icons.emoji_emotions_outlined,
+              dica: 'Emojis',
+              ativo: _emojiAberto,
+              aoTocar: () => setState(() => _emojiAberto = !_emojiAberto),
+            ),
+            const Spacer(),
+            // P106: vazio = microfone; com texto = enviar.
+            _texto.text.trim().isEmpty
+                ? _botaoRedondo(icone: Icons.mic, dica: 'Gravar áudio', aoTocar: c.enviando ? null : c.comecarGravacao)
+                : _botaoRedondo(icone: Icons.send, dica: 'Enviar', aoTocar: c.enviando ? null : _enviarTexto),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _painelEmoji() {
+    return Container(
+      height: 150,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFD9E0E8)),
       ),
+      child: GridView.builder(
+        padding: EdgeInsets.zero,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 8),
+        itemCount: _emojis.length,
+        itemBuilder: (_, i) => InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: () => _inserirEmoji(_emojis[i]),
+          child: Center(child: Text(_emojis[i], style: const TextStyle(fontSize: 20))),
+        ),
+      ),
+    );
+  }
+
+  void _inserirEmoji(String emoji) {
+    final sel = _texto.selection;
+    final inicio = sel.isValid ? sel.start : _texto.text.length;
+    final fim = sel.isValid ? sel.end : _texto.text.length;
+    // O listener de _texto (initState) ja chama setState, entao nao precisa aqui.
+    _texto.value = TextEditingValue(
+      text: _texto.text.replaceRange(inicio, fim, emoji),
+      selection: TextSelection.collapsed(offset: inicio + emoji.length),
+    );
+    _foco.requestFocus();
+  }
+
+  Widget _botaoBarra({
+    required IconData icone,
+    required String dica,
+    VoidCallback? aoTocar,
+    bool ativo = false,
+  }) {
+    return IconButton(
+      tooltip: dica,
+      icon: Icon(icone, size: 21),
+      color: ativo ? _azul : Colors.black54,
+      splashRadius: 20,
+      constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+      padding: EdgeInsets.zero,
+      onPressed: aoTocar,
     );
   }
 
@@ -740,7 +839,7 @@ class _NuvDeskChatPainelState extends State<NuvDeskChatPainel> {
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: aoTocar,
-          child: SizedBox(width: 44, height: 44, child: Icon(icone, color: Colors.white, size: 22)),
+          child: SizedBox(width: 40, height: 40, child: Icon(icone, color: Colors.white, size: 21)),
         ),
       ),
     );
@@ -765,25 +864,27 @@ class _NuvDeskChatPainelState extends State<NuvDeskChatPainel> {
     final meu = m.remetente == 'client';
     return Align(
       alignment: meu ? Alignment.centerRight : Alignment.centerLeft,
+      // P110: balao mais enxuto - o anterior ocupava quase a largura toda do
+      // painel e sobrava espaco em branco dentro dele.
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-        constraints: const BoxConstraints(maxWidth: 380),
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.fromLTRB(10, 6, 10, 4),
+        constraints: const BoxConstraints(maxWidth: 300),
         decoration: BoxDecoration(
           color: meu ? _azulClaro : Colors.white,
           border: Border.all(color: const Color(0xFFD9E0E8)),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(9),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!meu && m.autor.isNotEmpty)
-              Text(m.autor, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _azul)),
+              Text(m.autor, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _azul)),
             if (m.anexoId != null) _anexo(m),
-            if (m.texto.isNotEmpty) SelectableText(m.texto, style: const TextStyle(fontSize: 15, height: 1.35)),
+            if (m.texto.isNotEmpty) SelectableText(m.texto, style: const TextStyle(fontSize: 13.5, height: 1.3)),
             Align(
               alignment: Alignment.centerRight,
-              child: Text(_hora(m.criada), style: const TextStyle(fontSize: 11, color: Colors.black45)),
+              child: Text(_hora(m.criada), style: const TextStyle(fontSize: 10, color: Colors.black45)),
             ),
           ],
         ),
