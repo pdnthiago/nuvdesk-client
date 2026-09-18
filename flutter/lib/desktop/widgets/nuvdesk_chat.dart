@@ -471,7 +471,32 @@ class NuvDeskChatControle extends ChangeNotifier {
 // Botao da esquerda
 
 class NuvDeskChatBotao extends StatelessWidget {
-  const NuvDeskChatBotao({Key? key}) : super(key: key);
+  /// Falso enquanto o NuvDesk nao esta instalado: o botao aparece apagado. Quem
+  /// decide e a tela que chama (bind.mainIsInstalled) e nao o state.json - esse
+  /// arquivo sobra depois de desinstalar e deixava o botao ativo no avulso.
+  final bool instalado;
+  const NuvDeskChatBotao({Key? key, this.instalado = true}) : super(key: key);
+
+  Widget _inativo() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDF0F4),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.forum_outlined, color: Colors.black38, size: 20),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text('Fale com o Suporte',
+                style: TextStyle(color: Colors.black38, fontWeight: FontWeight.w600, fontSize: 14)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -479,6 +504,7 @@ class NuvDeskChatBotao extends StatelessWidget {
     return ListenableBuilder(
       listenable: nuvdeskChat,
       builder: (context, _) {
+        if (!instalado) return _inativo();
         if (!nuvdeskChat.disponivel) return const SizedBox.shrink();
         final aberto = nuvdeskChat.aberto;
         return Container(
