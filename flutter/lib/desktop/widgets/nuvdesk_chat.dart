@@ -1024,6 +1024,7 @@ class _BolhaAudioState extends State<_BolhaAudio> {
   bool _tocando = false;
   bool _carregando = false;
   bool _falhou = false;
+  bool _completou = false;
   Duration _posicao = Duration.zero;
   Duration _total = Duration.zero;
 
@@ -1033,6 +1034,7 @@ class _BolhaAudioState extends State<_BolhaAudio> {
     _escutas.add(_player.onPositionChanged.listen((p) => mounted ? setState(() => _posicao = p) : null));
     _escutas.add(_player.onDurationChanged.listen((d) => mounted ? setState(() => _total = d) : null));
     _escutas.add(_player.onPlayerComplete.listen((_) {
+      _completou = true;
       if (mounted) {
         setState(() {
           _tocando = false;
@@ -1068,6 +1070,18 @@ class _BolhaAudioState extends State<_BolhaAudio> {
         await File(caminho).writeAsBytes(bytes);
         _arquivo = caminho;
         await _player.setSource(DeviceFileSource(caminho));
+        // O padrao do audioplayers e ReleaseMode.release: quando o audio acaba
+        // ele LARGA os recursos, e o `resume()` do segundo clique nao tinha mais
+        // fonte nenhuma pra tocar - o audio so funcionava uma vez. A propria
+        // documentacao manda usar `stop` "se voce pretende tocar de novo depois".
+        await _player.setReleaseMode(ReleaseMode.stop);
+      }
+      // Depois de terminar, o cursor pode ficar no fim: sem voltar pro inicio o
+      // play recomeca ja acabado. Nao da pra testar audio aqui, entao a volta e
+      // explicita em vez de confiar no comportamento de cada plataforma.
+      if (_completou) {
+        await _player.seek(Duration.zero);
+        _completou = false;
       }
       await _player.resume();
       if (mounted) {
