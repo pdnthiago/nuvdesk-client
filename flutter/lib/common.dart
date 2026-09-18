@@ -15,6 +15,7 @@ import 'package:flutter_hbb/main.dart';
 import 'package:flutter_hbb/models/peer_model.dart';
 import 'package:flutter_hbb/models/peer_tab_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
+import 'package:flutter_hbb/nuvdesk_versao.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_hbb/utils/platform_channel.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -3733,7 +3734,7 @@ Widget loadPowered(BuildContext context) {
   if (bind.mainGetBuildinOption(key: "hide-powered-by-me") == 'Y') {
     return SizedBox.shrink();
   }
-  return MouseRegion(
+  final marca = MouseRegion(
     cursor: SystemMouseCursors.click,
     child: GestureDetector(
       onTap: () {
@@ -3751,6 +3752,26 @@ Widget loadPowered(BuildContext context) {
           )),
     ),
   ).marginOnly(top: 6);
+
+  // NuvDesk: mostra a NOSSA versao (a mesma que o painel exibe). A do RustDesk
+  // fica oculta - segue existindo e sendo comparada entre os dois lados pra
+  // negociar recursos da sessao, mas nao aparece pro cliente nem pra gente.
+  final versao = nuvdeskVersao();
+  if (versao == null) return marca;
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      marca,
+      Opacity(
+        opacity: 0.5,
+        child: Text(
+          'NuvDesk $versao',
+          overflow: TextOverflow.clip,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+        ),
+      ),
+    ],
+  );
 }
 
 const _kDefaultLogoAsset = 'assets/logo.png';
