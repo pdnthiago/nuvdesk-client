@@ -315,8 +315,11 @@ showCmWindow({bool isStartup = false}) async {
       windowManager.setOpacity(1)
     ]);
     // ensure initial window size to be changed
+    // NuvDesk: centralizada, nao no canto. O cliente e leigo e precisa VER o
+    // pedido de acesso - no canto ela passava despercebida atras do que estava
+    // aberto.
     await windowManager.setSizeAlignment(
-        kConnectionManagerWindowSizeClosedChat, Alignment.topRight);
+        kConnectionManagerWindowSizeClosedChat, Alignment.center);
     _isCmReadyToShow = true;
   } else if (_isCmReadyToShow) {
     if (await windowManager.getOpacity() != 1) {
@@ -327,7 +330,7 @@ showCmWindow({bool isStartup = false}) async {
       await windowManager.focus();
       await windowManager.minimize(); //needed
       await windowManager.setSizeAlignment(
-          kConnectionManagerWindowSizeClosedChat, Alignment.topRight);
+          kConnectionManagerWindowSizeClosedChat, Alignment.center);
       windowOnTop(null);
     }
   }
