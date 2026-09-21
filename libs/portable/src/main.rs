@@ -178,6 +178,13 @@ fn setup(
             *_ui = true;
             ui::setup();
         }
+        // NuvDesk: uma copia antiga ainda aberta (bandeja, --server, --cm) trava
+        // os arquivos; a remocao e o write_to_file falham calados e a versao
+        // nova passa a rodar o codigo velho. Aconteceu em 21/09 com o Rapido.
+        #[cfg(windows)]
+        if dir.exists() {
+            win::kill_processes_in(&dir);
+        }
         std::fs::remove_dir_all(&dir).ok();
     }
     let mut metadata_paths = reader.package_paths.clone();
@@ -332,6 +339,22 @@ mod win {
             .creation_flags(winapi::um::winbase::CREATE_NO_WINDOW)
             .output();
         let _allow_err = std::fs::copy(src, &format!("{}\\{}", dir.to_string_lossy(), tgt));
+    }
+
+    // NuvDesk: so os processos que rodam de dentro da pasta de extracao - nunca
+    // por nome, que derrubaria o agente instalado (mesmo nome de executavel).
+    pub(super) fn kill_processes_in(dir: &Path) {
+        let prefix = format!("{}\\", dir.to_string_lossy()).replace('\'', "''");
+        let script = format!(
+            "Get-Process | Where-Object {{ $_.Path -and $_.Path.StartsWith('{}', [StringComparison]::OrdinalIgnoreCase) }} | Stop-Process -Force -ErrorAction SilentlyContinue",
+            prefix
+        );
+        let _allow_err = Command::new("powershell")
+            .args(&["-NoProfile", "-NonInteractive", "-Command", &script])
+            .creation_flags(winapi::um::winbase::CREATE_NO_WINDOW)
+            .output();
+        // o Windows solta os arquivos logo depois do processo morrer, nao no mesmo instante
+        std::thread::sleep(std::time::Duration::from_millis(800));
     }
 
     /// Check if the executable is a Quick Support version.

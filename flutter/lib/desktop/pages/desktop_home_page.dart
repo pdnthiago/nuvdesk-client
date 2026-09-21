@@ -44,6 +44,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   var systemError = '';
   StreamSubscription? _uniLinksSubscription;
   var svcStopped = false.obs;
+  // NuvDesk: o empacotador do Rapido (libs/portable) exporta RUSTDESK_APPNAME
+  // pro processo. Lido em tempo de execucao - o isRunningInPortableMode() usa
+  // bool.hasEnvironment, que e de compilacao.
+  final bool _nuvdeskRapido =
+      Platform.environment.containsKey(kEnvPortableExecutable);
   var watchIsCanScreenRecording = false;
   var watchIsProcessTrust = false;
   var watchIsInputMonitoring = false;
@@ -120,7 +125,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       // NuvDesk (P04/P103): botao do chat; a conversa abre no painel da direita.
       // Sem instalacao (NuvDesk Rapido) ele fica apagado: nao ha maquina
       // cadastrada pra conversa pertencer.
-      NuvDeskChatBotao(instalado: bind.mainIsInstalled()),
+      // NuvDesk: o Rapido rodando numa maquina que ja tem o agente instalado
+      // tambem ve mainIsInstalled() == true, mas o chat e a identidade sao do
+      // instalado - aqui o botao fica apagado.
+      NuvDeskChatBotao(
+          instalado: bind.mainIsInstalled() && !_nuvdeskRapido),
     ];
     if (isIncomingOnly) {
       children.addAll([
@@ -469,6 +478,28 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       return buildInstallCard("", systemError, "", () {});
     }
 
+    // NuvDesk: o Rapido nao consegue funcionar ao lado do agente instalado - os
+    // dois sao o mesmo computador (mesmo ID) e o servico do instalado ocupa o
+    // lugar, entao a senha ficava em "Gerando..." com "Nao esta pronto" sem
+    // explicacao nenhuma. Nao usa buildInstallCard: ele some com a opcao
+    // hide-help-cards.
+    if (isWindows && _nuvdeskRapido && bind.mainIsInstalled()) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(0, 20, 20, 0),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF4E5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFF0B45A)),
+        ),
+        child: const Text(
+          'O NuvDesk já está instalado neste computador. Feche esta janela e '
+          'use o NuvDesk instalado (ícone perto do relógio).',
+          style: TextStyle(fontSize: 12.5, color: Color(0xFF5C3B00)),
+        ),
+      );
+    }
+
     // NuvDesk: no Windows nao ha cartao de instalar nem de atualizar. Quem
     // instala e o tecnico, durante o atendimento - empurrar instalacao pro
     // cliente do NuvDesk Rapido e ruido, e o aviso de "versao desatualizada"
@@ -694,6 +725,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   @override
   void initState() {
     super.initState();
+    // NuvDesk: desinstalar o agente grava stop-service=Y na configuracao do
+    // usuario (uninstall_service), que o Rapido compartilha por ter o mesmo
+    // nome de app. Resultado: o Rapido abria com "Servico nao esta em
+    // execucao" e o cliente tinha que achar o botao Iniciar. Sem instalacao
+    // nao ha servico do Windows pra respeitar - e o mesmo que clicar Iniciar.
+    if (isWindows &&
+        !bind.mainIsInstalled() &&
+        bind.mainGetOptionSync(key: kOptionStopService) == 'Y') {
+      start_service(true);
+    }
     _updateTimer = periodic_immediate(const Duration(seconds: 1), () async {
       await gFFI.serverModel.fetchID();
       final error = await bind.mainGetError();

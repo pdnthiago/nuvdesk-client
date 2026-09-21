@@ -17,9 +17,20 @@ import 'dart:io';
 String? _cache;
 bool _lido = false;
 
+/// Versao do NuvDesk Rapido. O Rapido nao passa pelo instalador, entao nao
+/// tem state.json proprio - e numa maquina que tambem tem o agente, ler o
+/// state.json mostrava a versao do INSTALADO. Subir a cada build do Rapido
+/// (regra de versionamento do CLAUDE.md do NuvDesk).
+const String kNuvdeskRapidoVersao = '1.0.2';
+
 String? nuvdeskVersao() {
   if (_lido) return _cache;
   _lido = true;
+  // O empacotador do Rapido (libs/portable) exporta RUSTDESK_APPNAME.
+  if (Platform.environment.containsKey('RUSTDESK_APPNAME')) {
+    _cache = kNuvdeskRapidoVersao;
+    return _cache;
+  }
   try {
     final base = Platform.environment['ProgramData'];
     if (base == null) return null;
