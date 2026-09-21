@@ -323,14 +323,21 @@ showCmWindow({bool isStartup = false}) async {
     _isCmReadyToShow = true;
   } else if (_isCmReadyToShow) {
     if (await windowManager.getOpacity() != 1) {
+      // NuvDesk: a janela chega aqui MINIMIZADA e escondida (hideCmWindow). O
+      // setSizeAlignment rodava depois do minimize - e reposicionar janela
+      // minimizada nao pega no Windows (so move o icone). Ao restaurar, ela
+      // voltava pro canto (0,0). Por isso nascia no canto mesmo com o codigo
+      // mandando pro centro (e antes, com "topRight", tambem no canto
+      // esquerdo). Restaura e posiciona ANTES, ainda transparente.
+      await windowManager.restore();
+      await windowManager.setSizeAlignment(
+          kConnectionManagerWindowSizeClosedChat, Alignment.center);
       await windowManager.setOpacity(1);
       // NuvDesk: a janela sobe escondida (hide()), entao precisa de show()
       // antes do foco - so opacidade nao traz de volta uma janela oculta.
       await windowManager.show();
       await windowManager.focus();
       await windowManager.minimize(); //needed
-      await windowManager.setSizeAlignment(
-          kConnectionManagerWindowSizeClosedChat, Alignment.center);
       windowOnTop(null);
     }
   }
