@@ -456,6 +456,20 @@ jobs:
           mkdir -p ./SignOutput
           mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
 
+      # O "NuvDesk Rapido" e exatamente este executavel auto-extraivel: roda sem
+      # instalar. Publicar aqui evita ter que gerar a mao (o generate.py precisa
+      # de Python, que nao existe na maquina de desenvolvimento).
+      - name: Publish NuvDesk Rapido
+        if: matrix.job.arch == 'x86_64'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -x
+          cp ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe NuvDeskRapido.exe
+          sha256sum NuvDeskRapido.exe
+          gh release upload nuvdesk-latest NuvDeskRapido.exe --clobber --repo "${{ github.repository }}"
+
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
