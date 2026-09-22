@@ -722,6 +722,52 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
+  /// Abre o NuvDesk instalado e encerra o Rapido.
+  ///
+  /// A abertura e ADIADA (PowerShell espera 1,5 s) porque o executavel do
+  /// Windows so deixa existir uma janela principal "NuvDesk"
+  /// (flutter/windows/runner/main.cpp, FindWindowW): aberto na hora, ele
+  /// acharia a janela do proprio Rapido e fecharia sem abrir nada.
+  /// O ambiente vai SEM RUSTDESK_APPNAME: herdada, o instalado se acharia o
+  /// Rapido (e o Rust usa essa variavel pra descobrir o nome do app).
+  /// Se o executavel nao for achado, fica o aviso amarelo como na 1.0.2.
+  void _abrirInstaladoEFechar() {
+    final bases = [
+      Platform.environment['ProgramFiles'],
+      Platform.environment['ProgramW6432'],
+      Platform.environment['ProgramFiles(x86)'],
+    ].whereType<String>();
+    String? exe;
+    for (final base in bases) {
+      final candidato = '$base\\NuvDesk\\NuvDesk.exe';
+      if (File(candidato).existsSync()) {
+        exe = candidato;
+        break;
+      }
+    }
+    if (exe == null) return;
+    final ambiente = Map<String, String>.from(Platform.environment)
+      ..remove(kEnvPortableExecutable)
+      ..remove('SET_FOREGROUND_WINDOW');
+    final caminho = exe.replaceAll("'", "''");
+    Process.start(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-WindowStyle',
+        'Hidden',
+        '-Command',
+        "Start-Sleep -Milliseconds 1500; Start-Process -FilePath '$caminho'",
+      ],
+      environment: ambiente,
+      includeParentEnvironment: false,
+      mode: ProcessStartMode.detached,
+    ).then((_) => exit(0), onError: (_) {
+      // Sem PowerShell: fica o aviso amarelo, o cliente fecha e abre na mao.
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -734,6 +780,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         !bind.mainIsInstalled() &&
         bind.mainGetOptionSync(key: kOptionStopService) == 'Y') {
       start_service(true);
+    }
+    // NuvDesk (Rapido 1.0.3): com o agente instalado no PC, o Rapido nunca fica
+    // pronto - o servico do instalado so aceita IPC do proprio executavel
+    // (src/ipc/auth.rs, "executable mismatch") e a janela ficava em "Nao esta
+    // pronto" / "Gerando...". Em vez de mostrar isso ao cliente, abre o NuvDesk
+    // instalado e fecha o Rapido.
+    if (isWindows && _nuvdeskRapido && bind.mainIsInstalled()) {
+      _abrirInstaladoEFechar();
     }
     _updateTimer = periodic_immediate(const Duration(seconds: 1), () async {
       await gFFI.serverModel.fetchID();

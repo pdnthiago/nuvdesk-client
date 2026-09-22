@@ -21,7 +21,7 @@ bool _lido = false;
 /// tem state.json proprio - e numa maquina que tambem tem o agente, ler o
 /// state.json mostrava a versao do INSTALADO. Subir a cada build do Rapido
 /// (regra de versionamento do CLAUDE.md do NuvDesk).
-const String kNuvdeskRapidoVersao = '1.0.2';
+const String kNuvdeskRapidoVersao = '1.0.3';
 
 String? nuvdeskVersao() {
   if (_lido) return _cache;
