@@ -724,13 +724,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   /// Abre o NuvDesk instalado e encerra o Rapido.
   ///
-  /// A abertura e ADIADA (PowerShell espera 1,5 s) porque o executavel do
-  /// Windows so deixa existir uma janela principal "NuvDesk"
-  /// (flutter/windows/runner/main.cpp, FindWindowW): aberto na hora, ele
-  /// acharia a janela do proprio Rapido e fecharia sem abrir nada.
-  /// O ambiente vai SEM RUSTDESK_APPNAME: herdada, o instalado se acharia o
-  /// Rapido (e o Rust usa essa variavel pra descobrir o nome do app).
-  /// Se o executavel nao for achado, fica o aviso amarelo como na 1.0.2.
+  /// O instalado so pode abrir DEPOIS que o Rapido morrer: o executavel do
+  /// Windows deixa existir uma janela principal "NuvDesk" so
+  /// (flutter/windows/runner/main.cpp, FindWindowW) e, achando a do Rapido,
+  /// fecharia sem abrir nada. Por isso um PowerShell espera este processo
+  /// terminar (Wait-Process) e so entao abre o instalado.
+  ///
+  /// Testado em 22/09 (a 1.ª versao do 1.0.3 nao abria nada):
+  /// - PowerShell em ProcessStartMode.detached fica sem console e sai sem
+  ///   executar (mesmo com o pai vivo). Via "cmd /c start /b" funciona;
+  /// - o comando vai em -EncodedCommand: o caminho tem espaco
+  ///   ("Program Files") e passa por cmd e PowerShell sem briga de aspas;
+  /// - o ambiente vai SEM RUSTDESK_APPNAME: herdada, o instalado se acharia o
+  ///   Rapido (e o Rust usa essa variavel pra descobrir o nome do app).
+  /// Sem o executavel instalado, fica o aviso amarelo da 1.0.2.
   void _abrirInstaladoEFechar() {
     final bases = [
       Platform.environment['ProgramFiles'],
@@ -746,25 +753,37 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       }
     }
     if (exe == null) return;
+    final caminho = exe.replaceAll("'", "''");
+    final script = "Wait-Process -Id $pid -Timeout 20 -ErrorAction SilentlyContinue; "
+        "Start-Process -FilePath '$caminho'";
+    // -EncodedCommand = base64 de UTF-16LE.
+    final utf16 = <int>[];
+    for (final c in script.codeUnits) {
+      utf16..add(c & 0xff)..add(c >> 8);
+    }
     final ambiente = Map<String, String>.from(Platform.environment)
       ..remove(kEnvPortableExecutable)
       ..remove('SET_FOREGROUND_WINDOW');
-    final caminho = exe.replaceAll("'", "''");
     Process.start(
-      'powershell.exe',
+      'cmd.exe',
       [
+        '/c',
+        'start',
+        '""',
+        '/b',
+        'powershell.exe',
         '-NoProfile',
         '-NonInteractive',
         '-WindowStyle',
         'Hidden',
-        '-Command',
-        "Start-Sleep -Milliseconds 1500; Start-Process -FilePath '$caminho'",
+        '-EncodedCommand',
+        base64.encode(utf16),
       ],
       environment: ambiente,
       includeParentEnvironment: false,
       mode: ProcessStartMode.detached,
     ).then((_) => exit(0), onError: (_) {
-      // Sem PowerShell: fica o aviso amarelo, o cliente fecha e abre na mao.
+      // Sem cmd/PowerShell: fica o aviso amarelo, o cliente fecha e abre na mao.
     });
   }
 
