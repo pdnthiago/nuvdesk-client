@@ -100,7 +100,9 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.carriez.flutter_hbb"
-        minSdkVersion 22
+        // NuvDesk: 23 (Android 6.0) e o minimo do record_android, que grava o
+        // audio do chat. Com 22 o manifest merger recusa a biblioteca.
+        minSdkVersion 23
         targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName

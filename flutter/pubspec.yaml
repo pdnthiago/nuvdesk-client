@@ -141,6 +141,13 @@ dependency_overrides:
   # 1.4.0+) os dois jobs resolvem a mesma combinacao compativel.
   record_linux: 1.1.1
   record_platform_interface: 1.3.0
+  # Android (23/09): sem fixar, o pub resolve record_android 1.5.x, cujo
+  # build.gradle usa `compileSdk = flutter.compileSdkVersion` - propriedade que
+  # o Gradle desta base nao expoe pra plugins ("Could not get unknown property
+  # 'flutter' for extension 'android'", run 35779102563). A 1.3.3 usa
+  # compileSdk fixo (34), aceita a interface 1.3.0 acima (^1.2.0) e o record
+  # 5.2.1 aceita ela (^1.3.1). Exige minSdk 23 (ver android/app/build.gradle).
+  record_android: 1.3.3
 
 # rerun: flutter pub run flutter_launcher_icons
 flutter_icons:
