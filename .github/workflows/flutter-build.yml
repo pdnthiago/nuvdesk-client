@@ -32,8 +32,8 @@ env:
   # atualiza por cima. O APK 1.0.0 (22/09) saiu com 2068 (arquitetura 2 x 1000 +
   # build 68 do pubspec); por isso comeca em 3001. O APK por arquitetura soma
   # 1000 x arquitetura (arm64 = 2) - o AAB da loja usa o numero puro.
-  NUVDESK_ANDROID_VERSION: "1.0.4"
-  NUVDESK_ANDROID_BUILD: "3004"
+  NUVDESK_ANDROID_VERSION: "1.0.5"
+  NUVDESK_ANDROID_BUILD: "3005"
   # Windows arm64 only: the first stable Flutter to ship a native arm64 Windows Dart SDK +
   # engine is 3.44. Every other platform stays on FLUTTER_VERSION (3.24.5) until Windows 7
   # support is restored after the upstream-wide Flutter bump. The arm64 job patches the few
@@ -1323,7 +1323,7 @@ jobs:
               # build flutter
               pushd flutter
               flutter build apk "--${{ matrix.job.reltype }}" --target-platform android-arm64 --split-per-abi \
-                --build-name "$NUVDESK_ANDROID_VERSION" --build-number "$NUVDESK_ANDROID_BUILD"
+                --build-name "$NUVDESK_ANDROID_VERSION" --build-number "$NUVDESK_ANDROID_BUILD" --dart-define=NUVDESK_ANDROID_VERSION="$NUVDESK_ANDROID_VERSION"
               mv build/app/outputs/flutter-apk/app-arm64-v8a-${{ matrix.job.reltype }}.apk ../rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
             ;;
             armv7-linux-androideabi)
@@ -1333,7 +1333,7 @@ jobs:
               # build flutter
               pushd flutter
               flutter build apk "--${{ matrix.job.reltype }}" --target-platform android-arm --split-per-abi \
-                --build-name "$NUVDESK_ANDROID_VERSION" --build-number "$NUVDESK_ANDROID_BUILD"
+                --build-name "$NUVDESK_ANDROID_VERSION" --build-number "$NUVDESK_ANDROID_BUILD" --dart-define=NUVDESK_ANDROID_VERSION="$NUVDESK_ANDROID_VERSION"
               mv build/app/outputs/flutter-apk/app-armeabi-v7a-${{ matrix.job.reltype }}.apk ../rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}${{ matrix.job.suffix }}.apk
             ;;
             x86_64-linux-android)
@@ -1700,7 +1700,7 @@ jobs:
           cp ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/arm-linux-androideabi/libc++_shared.so $J/armeabi-v7a/
           pushd flutter
           flutter build appbundle --release --target-platform android-arm64,android-arm \
-            --build-name "$NUVDESK_ANDROID_VERSION" --build-number "$NUVDESK_ANDROID_BUILD"
+            --build-name "$NUVDESK_ANDROID_VERSION" --build-number "$NUVDESK_ANDROID_BUILD" --dart-define=NUVDESK_ANDROID_VERSION="$NUVDESK_ANDROID_VERSION"
           popd
           mkdir -p signed-aab
           mv ./flutter/build/app/outputs/bundle/release/app-release.aab signed-aab/nuvdesk-android.aab
