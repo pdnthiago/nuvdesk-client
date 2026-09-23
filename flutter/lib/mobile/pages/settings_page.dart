@@ -74,6 +74,10 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
   var _checkUpdateOnStartup = false;
   var _showTerminalExtraKeys = false;
   var _floatingWindowDisabled = false;
+  // NuvDesk (Android 1.0.3): o app so RECEBE suporte da Nuvsoft. Saem da tela o
+  // que e de quem acessa outros aparelhos, o que troca servidor/rede (quebraria
+  // a conexao com o nosso servidor) e as formas de conectar por fora dele.
+  bool get _nuvdesk => isAndroid;
   var _keepScreenOn = KeepScreenOn.duringControlled; // relay on floating window
   var _enableAbr = false;
   var _denyLANDiscovery = false;
@@ -140,6 +144,12 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
     _hideWebSocket =
         bind.mainGetBuildinOption(key: kOptionHideWebSocketSetting) == 'Y' ||
             isWeb;
+    if (_nuvdesk) {
+      _hideServer = true;
+      _hideProxy = true;
+      _hideNetwork = true;
+      _hideWebSocket = true;
+    }
     _enableTrustedDevices = mainGetBoolOptionSync(kOptionEnableTrustedDevices);
     _enableUdpPunch = mainGetLocalBoolOptionSync(kOptionEnableUdpPunch);
     _enableIpv6Punch = mainGetLocalBoolOptionSync(kOptionEnableIpv6Punch);
@@ -625,7 +635,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
           gFFI.invokeMethod(AndroidChannel.kSetStartOnBootOpt, toValue);
         }));
 
-    if (!bind.isCustomClient()) {
+    if (!bind.isCustomClient() && !_nuvdesk) {
       enhancementsTiles.add(
         SettingsTile.switchTile(
           initialValue: _checkUpdateOnStartup,
@@ -641,22 +651,24 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
       );
     }
 
-    enhancementsTiles.add(
-      SettingsTile.switchTile(
-        initialValue: _showTerminalExtraKeys,
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(translate('Show terminal extra keys')),
-        ]),
-        onToggle: (bool v) async {
-          await mainSetLocalBoolOption(kOptionEnableShowTerminalExtraKeys, v);
-          final newValue =
-              mainGetLocalBoolOptionSync(kOptionEnableShowTerminalExtraKeys);
-          setState(() {
-            _showTerminalExtraKeys = newValue;
-          });
-        },
-      ),
-    );
+    if (!_nuvdesk) {
+      enhancementsTiles.add(
+        SettingsTile.switchTile(
+          initialValue: _showTerminalExtraKeys,
+          title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(translate('Show terminal extra keys')),
+          ]),
+          onToggle: (bool v) async {
+            await mainSetLocalBoolOption(kOptionEnableShowTerminalExtraKeys, v);
+            final newValue =
+                mainGetLocalBoolOptionSync(kOptionEnableShowTerminalExtraKeys);
+            setState(() {
+              _showTerminalExtraKeys = newValue;
+            });
+          },
+        ),
+      );
+    }
 
     onFloatingWindowChanged(bool toValue) async {
       if (toValue) {
@@ -714,7 +726,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
     final settings = SettingsList(
       sections: [
         customClientSection,
-        if (!bind.isDisableAccount())
+        if (!bind.isDisableAccount() && !_nuvdesk)
           SettingsSection(
             title: Text(translate('Account')),
             tiles: [
@@ -761,7 +773,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 onPressed: (context) {
                   changeSocks5Proxy();
                 }),
-          if (isAndroid && !bind.isOutgoingOnly())
+          if (isAndroid && !bind.isOutgoingOnly() && !_nuvdesk)
             SettingsTile(
                 title: Text(translate('Deploy')),
                 leading: Icon(Icons.cloud_upload),
@@ -783,7 +795,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                       });
                     },
             ),
-          if (!_isUsingPublicServer)
+          if (!_isUsingPublicServer && !_nuvdesk)
             SettingsTile.switchTile(
               title: Text(translate('Allow insecure TLS fallback')),
               initialValue: _allowInsecureTlsFallback,
@@ -799,7 +811,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                       });
                     },
             ),
-          if (isAndroid && !outgoingOnly && !_isUsingPublicServer)
+          if (isAndroid && !outgoingOnly && !_isUsingPublicServer && !_nuvdesk)
             SettingsTile.switchTile(
               title: Text(translate('Disable UDP')),
               initialValue: _disableUdp,
@@ -815,7 +827,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                       });
                     },
             ),
-          if (!incomingOnly)
+          if (!incomingOnly && !_nuvdesk)
             SettingsTile.switchTile(
               title: Text(translate('Enable UDP hole punching')),
               initialValue: _enableUdpPunch,
@@ -828,7 +840,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 });
               },
             ),
-          if (!incomingOnly)
+          if (!incomingOnly && !_nuvdesk)
             SettingsTile.switchTile(
               title: Text(translate('Enable IPv6 P2P connection')),
               initialValue: _enableIpv6Punch,
@@ -859,7 +871,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               showThemeSettings(gFFI.dialogManager);
             },
           ),
-          if (!bind.isDisableAccount())
+          if (!bind.isDisableAccount() && !_nuvdesk)
             SettingsTile.switchTile(
               title: Text(translate('note-at-conn-end-tip')),
               initialValue: _allowAskForNoteAtEndOfConnection,
@@ -877,7 +889,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 });
               },
             ),
-          if (!incomingOnly)
+          if (!incomingOnly && !_nuvdesk)
             SettingsTile.switchTile(
               title:
                   Text(translate('keep-awake-during-outgoing-sessions-label')),
@@ -891,7 +903,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
               },
             ),
         ]),
-        if (isAndroid)
+        if (isAndroid && !_nuvdesk)
           SettingsSection(title: Text(translate('Hardware Codec')), tiles: [
             SettingsTile.switchTile(
               title: Text(translate('Enable hardware codec')),
@@ -908,7 +920,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                     },
             ),
           ]),
-        if (isAndroid)
+        if (isAndroid && !_nuvdesk)
           SettingsSection(
             title: Text(translate("Recording")),
             tiles: [
@@ -963,17 +975,19 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
         if (isAndroid &&
             !disabledSettings &&
             !outgoingOnly &&
-            !hideSecuritySettings)
+            !hideSecuritySettings &&
+            !_nuvdesk)
           SettingsSection(title: Text('2FA'), tiles: tfaTiles),
         if (isAndroid &&
             !disabledSettings &&
             !outgoingOnly &&
-            !hideSecuritySettings)
+            !hideSecuritySettings &&
+            !_nuvdesk)
           SettingsSection(
             title: Text(translate("Share screen")),
             tiles: shareScreenTiles,
           ),
-        if (!bind.isIncomingOnly()) defaultDisplaySection(),
+        if (!bind.isIncomingOnly() && !_nuvdesk) defaultDisplaySection(),
         if (isAndroid &&
             !disabledSettings &&
             !outgoingOnly &&
@@ -998,14 +1012,14 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                       )),
                 ),
                 leading: Icon(Icons.info)),
-            SettingsTile(
+            if (!_nuvdesk) SettingsTile(
                 title: Text(translate("Build Date")),
                 value: Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: Text(_buildDate),
                 ),
                 leading: Icon(Icons.query_builder)),
-            if (isAndroid)
+            if (isAndroid && !_nuvdesk)
               SettingsTile(
                   onPressed: (context) => onCopyFingerprint(_fingerprint),
                   title: Text(translate("Fingerprint")),
@@ -1025,7 +1039,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
             SettingsTile(
               title: Text(translate("Privacy Statement")),
               onPressed: (context) =>
-                  launchUrlString('https://www.nuvsoft.com.br'), // NuvDesk
+                  launchUrlString('https://app.nuvdeskapp.com.br/privacidade'), // NuvDesk
               leading: Icon(Icons.privacy_tip),
             )
           ],
