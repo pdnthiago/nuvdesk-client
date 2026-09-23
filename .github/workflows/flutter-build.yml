@@ -1704,6 +1704,12 @@ jobs:
           popd
           mkdir -p signed-aab
           mv ./flutter/build/app/outputs/bundle/release/app-release.aab signed-aab/nuvdesk-android.aab
+          # O gradle assina o AAB com a chave de DEBUG, e o jarsigner do passo
+          # seguinte ACRESCENTA a nossa em vez de trocar: o 1o AAB (23/09) saiu com
+          # duas (NUVDESK + ANDROIDD) e a Play espera so a chave de upload. Tira a
+          # de debug antes de assinar.
+          zip -d signed-aab/nuvdesk-android.aab 'META-INF/*.SF' 'META-INF/*.RSA' 'META-INF/*.EC' 'META-INF/MANIFEST.MF' || true
+          unzip -l signed-aab/nuvdesk-android.aab | grep META-INF || echo "sem assinatura antes do passo de assinar"
 
       - name: Setup sign tool version variable
         shell: bash
@@ -1734,6 +1740,10 @@ jobs:
           set -x
           cp "$AAB" nuvdesk-android.aab
           sha256sum nuvdesk-android.aab
+          # Tem de sair com UMA assinatura so (a chave de upload do NuvDesk).
+          ASS=$(unzip -l nuvdesk-android.aab | grep -cE 'META-INF/.*\.(RSA|EC)$' || true)
+          echo "assinaturas no AAB: $ASS"
+          [ "$ASS" = "1" ]
           # A release e recriada pelo job do APK arm64 (que roda antes: needs).
           gh release upload nuvdesk-android-latest nuvdesk-android.aab --clobber \
             --repo "${{ github.repository }}"
