@@ -50,6 +50,40 @@ print("traducoes com RustDesk -> NuvDesk:", total)
 PY
 grep -n 'android_input_permission_tip1' src/lang/ptbr.rs
 
+# Aba do app: "Compartilhar Tela" cortava ("Compartilhar T..."). Rotulo curto.
+python3 - <<'PY'
+arq = "src/lang/ptbr.rs"
+s = open(arq, encoding="utf-8").read()
+o = '("Share screen", "Compartilhar Tela"),'
+assert o in s, "traducao de Share screen mudou"
+open(arq, "w", encoding="utf-8").write(s.replace(o, '("Share screen", "Compartilhar"),'))
+PY
+
+# Textos nativos (Kotlin/XML), fora das traducoes: notificacao do servico, nome
+# do app, aviso ao ligar o aparelho e a descricao do servico de Acessibilidade
+# (aparece pro cliente nas configuracoes do Android e na revisao da Play).
+K=flutter/android/app/src/main/kotlin/com/carriez/flutter_hbb
+sed -i 's#const val DEFAULT_NOTIFY_TITLE = "RustDesk"#const val DEFAULT_NOTIFY_TITLE = "NuvDesk"#' $K/MainService.kt
+sed -i 's#val channelName = "RustDesk Service"#val channelName = "NuvDesk"#; s#description = "RustDesk Service Channel"#description = "Atendimento NuvDesk em andamento"#' $K/MainService.kt
+sed -i 's#"RustDesk is Open"#"NuvDesk iniciado"#' $K/BootReceiver.kt
+grep -n 'DEFAULT_NOTIFY_TITLE = \|channelName = \|NuvDesk iniciado' $K/MainService.kt $K/BootReceiver.kt
+python3 - <<'PY'
+import re
+arq = "flutter/android/app/src/main/res/values/strings.xml"
+s = open(arq, encoding="utf-8").read()
+def troca(nome, texto):
+    global s
+    s, n = re.subn(r'(<string name="%s">)[^<]*(</string>)' % nome, lambda m: m.group(1) + texto + m.group(2), s)
+    assert n == 1, nome
+troca("app_name", "NuvDesk")
+troca("accessibility_service_description",
+      "Permite que o técnico do suporte NuvDesk toque e navegue no seu celular durante um atendimento autorizado por você. Não lê nem guarda o conteúdo da tela.")
+troca("foreground_service_special_use_subtype",
+      "Mantém a conexão de suporte NuvDesk ativa enquanto o atendimento está em andamento.")
+open(arq, "w", encoding="utf-8").write(s)
+PY
+grep -n 'app_name\|accessibility_service_description' flutter/android/app/src/main/res/values/strings.xml
+
 # Icones a partir de nuvdesk-icon.png (raiz do repo).
 sudo apt-get install -y imagemagick >/dev/null
 RES=flutter/android/app/src/main/res

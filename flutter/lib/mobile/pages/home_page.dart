@@ -47,14 +47,17 @@ class HomePageState extends State<HomePage> {
 
   void initPages() {
     _pages.clear();
-    if (!bind.isIncomingOnly()) {
+    if (isAndroid && !bind.isOutgoingOnly()) {
+      // NuvDesk (Android 1.0.2): o app so RECEBE suporte. Sem a aba Conexao (que
+      // serve pra acessar outros aparelhos); Compartilhar abre primeiro, depois
+      // Chat e Configuracoes.
+      _pages.add(ServerPage());
+      _chatPageTabIndex = _pages.length;
+      _pages.add(ChatPage(type: ChatPageType.mobileMain));
+    } else if (!bind.isIncomingOnly()) {
       _pages.add(ConnectionPage(
         appBarActions: [],
       ));
-    }
-    if (isAndroid && !bind.isOutgoingOnly()) {
-      _chatPageTabIndex = _pages.length;
-      _pages.addAll([ChatPage(type: ChatPageType.mobileMain), ServerPage()]);
     }
     _pages.add(SettingsPage());
   }
