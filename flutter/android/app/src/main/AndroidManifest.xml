@@ -7,7 +7,15 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- NuvDesk: a Google Play proibe o pedido DIRETO de excecao de bateria pra
+         app de suporte remoto (so aceita mensageiro sem FCM, seguranca, automacao
+         e acessorios). O app abre a tela de otimizacao de bateria do Android
+         (common.kt, openBatteryOptimizationSettings). -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" tools:node="remove" />
+    <!-- NuvDesk: a camera so servia ao leitor de QR que troca o servidor (tirado
+         das Configuracoes). O plugin qr_code_scanner continua compilado e a
+         declararia pelo merge do manifesto. -->
+    <uses-permission android:name="android.permission.CAMERA" tools:node="remove" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

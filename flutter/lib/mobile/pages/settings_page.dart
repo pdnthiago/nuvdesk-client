@@ -30,7 +30,9 @@ class SettingsPage extends StatefulWidget implements PageShape {
   final icon = Icon(Icons.settings);
 
   @override
-  final appBarActions = bind.isDisableSettings() ? [] : [ScanButton()];
+  // NuvDesk: sem o leitor de QR (ele troca o servidor; e era o unico uso da camera).
+  final appBarActions =
+      bind.isDisableSettings() || isAndroid ? [] : [ScanButton()];
 
   @override
   State<SettingsPage> createState() => _SettingsState();

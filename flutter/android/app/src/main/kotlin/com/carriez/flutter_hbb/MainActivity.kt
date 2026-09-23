@@ -294,7 +294,9 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 "check_permission" -> {
-                    if (call.arguments is String) {
+                    if (call.arguments == android.Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) {
+                        result.success(isIgnoringBatteryOptimizations(context))
+                    } else if (call.arguments is String) {
                         result.success(XXPermissions.isGranted(context, call.arguments as String))
                     } else {
                         result.success(false)

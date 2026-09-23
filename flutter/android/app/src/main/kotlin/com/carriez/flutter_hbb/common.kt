@@ -79,7 +79,29 @@ fun isSupportVoiceCall(): Boolean {
     return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 }
 
+// NuvDesk: sem REQUEST_IGNORE_BATTERY_OPTIMIZATIONS no manifesto (regra da Google
+// Play). Checa pelo PowerManager (nao exige permissao) e, pra liberar, abre a lista
+// de otimizacao de bateria do Android, onde o cliente escolhe o NuvDesk.
+fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+    val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    return pm.isIgnoringBatteryOptimizations(context.packageName)
+}
+
+fun openBatteryOptimizationSettings(context: Context) {
+    try {
+        context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        })
+    } catch (e: Exception) {
+        startAction(context, Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+    }
+}
+
 fun requestPermission(context: Context, type: String) {
+    if (type == REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) {
+        openBatteryOptimizationSettings(context)
+        return
+    }
     XXPermissions.with(context)
         .permission(type)
         .request { _, all ->

@@ -27,7 +27,7 @@ class BootReceiver : BroadcastReceiver() {
                 return
             }
             // check pre-permission
-            if (!XXPermissions.isGranted(context, REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, SYSTEM_ALERT_WINDOW)){
+            if (!isIgnoringBatteryOptimizations(context) || !XXPermissions.isGranted(context, SYSTEM_ALERT_WINDOW)) {
                 Log.d(logTag, "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS or SYSTEM_ALERT_WINDOW is not granted")
                 return
             }

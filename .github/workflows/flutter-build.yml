@@ -32,8 +32,8 @@ env:
   # atualiza por cima. O APK 1.0.0 (22/09) saiu com 2068 (arquitetura 2 x 1000 +
   # build 68 do pubspec); por isso comeca em 3001. O APK por arquitetura soma
   # 1000 x arquitetura (arm64 = 2) - o AAB da loja usa o numero puro.
-  NUVDESK_ANDROID_VERSION: "1.0.3"
-  NUVDESK_ANDROID_BUILD: "3003"
+  NUVDESK_ANDROID_VERSION: "1.0.4"
+  NUVDESK_ANDROID_BUILD: "3004"
   # Windows arm64 only: the first stable Flutter to ship a native arm64 Windows Dart SDK +
   # engine is 3.44. Every other platform stays on FLUTTER_VERSION (3.24.5) until Windows 7
   # support is restored after the upstream-wide Flutter bump. The arm64 job patches the few
