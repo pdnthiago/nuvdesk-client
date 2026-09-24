@@ -23,6 +23,12 @@ bool _lido = false;
 /// (regra de versionamento do CLAUDE.md do NuvDesk).
 const String kNuvdeskRapidoVersao = '1.0.4';
 
+/// Versao do app Android. Chega da CI por `--dart-define`, a mesma que vira o
+/// versionName do APK/AAB (NUVDESK_ANDROID_VERSION no workflow) - assim a tela
+/// e a loja nunca divergem. Vazio numa build local sem o define.
+const String kNuvdeskAndroidVersao =
+    String.fromEnvironment('NUVDESK_ANDROID_VERSION');
+
 String? nuvdeskVersao() {
   if (_lido) return _cache;
   _lido = true;

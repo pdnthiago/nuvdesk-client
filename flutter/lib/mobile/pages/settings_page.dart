@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../common.dart';
+import '../../nuvdesk_versao.dart';
 import '../../common/widgets/dialog.dart';
 import '../../common/widgets/login.dart';
 import '../../consts.dart';
@@ -1001,7 +1002,27 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
         SettingsSection(
           title: Text(translate("About")),
           tiles: [
-            SettingsTile(
+            // NuvDesk: mostra a NOSSA versao. A do RustDesk (1.5.0) e do motor,
+            // igual em toda build, e so confundia quem lia a tela. Ela continua
+            // valendo por dentro (os dois lados comparam pra liberar recursos).
+            if (_nuvdesk)
+              SettingsTile(
+                  onPressed: (context) async {
+                    await launchUrl(Uri.parse(url));
+                  },
+                  title: Text(kNuvdeskAndroidVersao.isEmpty
+                      ? 'NuvDesk'
+                      : 'NuvDesk $kNuvdeskAndroidVersao'),
+                  value: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text('Desenvolvido pela Nuvsoft · nuvsoft.com.br',
+                        style: TextStyle(
+                          decoration: TextDecoration.underline,
+                        )),
+                  ),
+                  leading: Icon(Icons.info)),
+            if (!_nuvdesk)
+              SettingsTile(
                 onPressed: (context) async {
                   await launchUrl(Uri.parse(url));
                 },
