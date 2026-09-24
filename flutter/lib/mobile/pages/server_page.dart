@@ -688,7 +688,11 @@ class ConnectionManager extends StatelessWidget {
                       Expanded(child: ClientInfo(client)),
                       Expanded(
                           flex: -1,
-                          child: client.isFileTransfer || !client.authorized
+                          // NuvDesk (Android 1.0.8): sem aba Chat, o botao de
+                          // conversa levaria para Configuracoes - escondido.
+                          child: isAndroid ||
+                                  client.isFileTransfer ||
+                                  !client.authorized
                               ? const SizedBox.shrink()
                               : IconButton(
                                   onPressed: () {

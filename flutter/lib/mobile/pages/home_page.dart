@@ -4,7 +4,6 @@ import 'package:flutter_hbb/mobile/pages/settings_page.dart';
 import 'package:flutter_hbb/web/settings_page.dart';
 import 'package:get/get.dart';
 import '../../common.dart';
-import '../../common/widgets/chat_page.dart';
 import '../../models/platform_model.dart';
 import '../../models/state_model.dart';
 import 'connection_page.dart';
@@ -28,7 +27,7 @@ class HomePageState extends State<HomePage> {
   var _selectedIndex = 0;
   int get selectedIndex => _selectedIndex;
   final List<PageShape> _pages = [];
-  int _chatPageTabIndex = -1;
+  final int _chatPageTabIndex = -1; // NuvDesk 1.0.8: sem aba Chat
   bool get isChatPageCurrentTab => isAndroid
       ? _selectedIndex == _chatPageTabIndex
       : false; // change this when ios have chat page
@@ -49,11 +48,11 @@ class HomePageState extends State<HomePage> {
     _pages.clear();
     if (isAndroid && !bind.isOutgoingOnly()) {
       // NuvDesk (Android 1.0.2): o app so RECEBE suporte. Sem a aba Conexao (que
-      // serve pra acessar outros aparelhos); Compartilhar abre primeiro, depois
-      // Chat e Configuracoes.
+      // serve pra acessar outros aparelhos); Compartilhar abre primeiro.
+      // Android 1.0.8: sem a aba Chat tambem (decisao do usuario em 25/09 - o
+      // atendimento e assistido, o cliente ja fala com o tecnico). Ficam so
+      // Compartilhar e Configuracoes.
       _pages.add(ServerPage());
-      _chatPageTabIndex = _pages.length;
-      _pages.add(ChatPage(type: ChatPageType.mobileMain));
     } else if (!bind.isIncomingOnly()) {
       _pages.add(ConnectionPage(
         appBarActions: [],
