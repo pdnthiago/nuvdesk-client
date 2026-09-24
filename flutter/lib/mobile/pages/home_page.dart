@@ -49,7 +49,7 @@ class HomePageState extends State<HomePage> {
     if (isAndroid && !bind.isOutgoingOnly()) {
       // NuvDesk (Android 1.0.2): o app so RECEBE suporte. Sem a aba Conexao (que
       // serve pra acessar outros aparelhos); Compartilhar abre primeiro.
-      // Android 1.0.8: sem a aba Chat tambem (decisao do usuario em 25/09 - o
+      // Android 1.0.8: sem a aba Chat tambem (decisao do usuario em 24/09 - o
       // atendimento e assistido, o cliente ja fala com o tecnico). Ficam so
       // Compartilhar e Configuracoes.
       _pages.add(ServerPage());
