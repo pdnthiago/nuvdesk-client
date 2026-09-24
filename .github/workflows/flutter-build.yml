@@ -436,6 +436,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -x
+          # O binario se chama NuvDesk.exe desde o pacote: o RustDesk deriva o
+          # servico ("NuvDesk Service" -> "NuvDesk.exe --service"), o handler
+          # nuvdesk:// e o desinstalador do nome do executavel. Antes o
+          # instalador renomeava na maquina do cliente - um passo a mais que so
+          # podia dar errado, e quem abrisse o zip via "rustdesk.exe".
+          mv ./rustdesk/rustdesk.exe ./rustdesk/NuvDesk.exe
           7z a -tzip nuvdesk-windows-x64.zip ./rustdesk/* > /dev/null
           sha256sum nuvdesk-windows-x64.zip
           gh release delete nuvdesk-latest -y --repo "${{ github.repository }}" --cleanup-tag || true
@@ -458,7 +464,7 @@ jobs:
           sed -i '/dpiAware/d' res/manifest.xml
           pushd ./libs/portable
           pip3 install -r requirements.txt
-          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/NuvDesk.exe
           popd
           mkdir -p ./SignOutput
           mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe

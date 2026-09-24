@@ -21,7 +21,7 @@ bool _lido = false;
 /// tem state.json proprio - e numa maquina que tambem tem o agente, ler o
 /// state.json mostrava a versao do INSTALADO. Subir a cada build do Rapido
 /// (regra de versionamento do CLAUDE.md do NuvDesk).
-const String kNuvdeskRapidoVersao = '1.0.4';
+const String kNuvdeskRapidoVersao = '1.0.5';
 
 /// Versao do app Android. Chega da CI por `--dart-define`, a mesma que vira o
 /// versionName do APK/AAB (NUVDESK_ANDROID_VERSION no workflow) - assim a tela
