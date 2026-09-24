@@ -14,7 +14,6 @@ import '../../consts.dart';
 import '../../models/platform_model.dart';
 import '../../models/server_model.dart';
 import 'home_page.dart';
-import '../widgets/nuvdesk_parear.dart';
 
 class ServerPage extends StatefulWidget implements PageShape {
   @override
@@ -214,8 +213,6 @@ class _ServerPageState extends State<ServerPage> {
                         gFFI.serverModel.isStart
                             ? ServerInfo()
                             : ServiceNotRunningNotification(),
-                        // NuvDesk: pareamento com o painel (codigo de 6 digitos).
-                        const NuvdeskParearCard(),
                         const ConnectionManager(),
                         const PermissionChecker(),
                         SizedBox.fromSize(size: const Size(0, 15.0)),
