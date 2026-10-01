@@ -303,6 +303,16 @@ void runConnectionManagerScreen() async {
 
 bool _isCmReadyToShow = false;
 
+// NuvDesk (01/10): showCmWindow e chamada de varios lugares ao mesmo tempo - ao chegar a
+// conexao (addConnection), pelo windowOnTop do _addTab, e a cada ciclo do
+// timerCallback (server_model.dart), todos enquanto a opacidade ainda e 0. Cada
+// chamada rodava a sequencia inteira (restore, show, minimize...) em paralelo, e o
+// minimize de uma podia cair DEPOIS do restore de outra: a janela aparecia mas nao
+// respondia ao clique (Aceitar nao mudava de cor). Mais facil de acontecer em PC
+// lento e quando ja ha outra sessao aberta (a janela estava oculta). Agora so uma
+// sequencia por vez.
+bool _cmShowInProgress = false;
+
 showCmWindow({bool isStartup = false}) async {
   if (isStartup) {
     WindowOptions windowOptions = getHiddenTitleBarWindowOptions(
@@ -321,24 +331,35 @@ showCmWindow({bool isStartup = false}) async {
     await windowManager.setSizeAlignment(
         kConnectionManagerWindowSizeClosedChat, Alignment.center);
     _isCmReadyToShow = true;
-  } else if (_isCmReadyToShow) {
-    if (await windowManager.getOpacity() != 1) {
-      // NuvDesk: a janela chega aqui MINIMIZADA e escondida (hideCmWindow). O
-      // setSizeAlignment rodava depois do minimize - e reposicionar janela
-      // minimizada nao pega no Windows (so move o icone). Ao restaurar, ela
-      // voltava pro canto (0,0). Por isso nascia no canto mesmo com o codigo
-      // mandando pro centro (e antes, com "topRight", tambem no canto
-      // esquerdo). Restaura e posiciona ANTES, ainda transparente.
-      await windowManager.restore();
-      await windowManager.setSizeAlignment(
-          kConnectionManagerWindowSizeClosedChat, Alignment.center);
-      await windowManager.setOpacity(1);
-      // NuvDesk: a janela sobe escondida (hide()), entao precisa de show()
-      // antes do foco - so opacidade nao traz de volta uma janela oculta.
-      await windowManager.show();
-      await windowManager.focus();
-      await windowManager.minimize(); //needed
-      windowOnTop(null);
+  } else if (_isCmReadyToShow && !_cmShowInProgress) {
+    _cmShowInProgress = true;
+    try {
+      if (await windowManager.getOpacity() != 1) {
+        // NuvDesk: a janela chega aqui MINIMIZADA e escondida (hideCmWindow). O
+        // setSizeAlignment rodava depois do minimize - e reposicionar janela
+        // minimizada nao pega no Windows (so move o icone). Ao restaurar, ela
+        // voltava pro canto (0,0). Por isso nascia no canto mesmo com o codigo
+        // mandando pro centro (e antes, com "topRight", tambem no canto
+        // esquerdo). Restaura e posiciona ANTES, ainda transparente.
+        await windowManager.restore();
+        await windowManager.setSizeAlignment(
+            kConnectionManagerWindowSizeClosedChat, Alignment.center);
+        await windowManager.setOpacity(1);
+        // NuvDesk: a janela sobe escondida (hide()), entao precisa de show()
+        // antes do foco - so opacidade nao traz de volta uma janela oculta.
+        await windowManager.show();
+        await windowManager.focus();
+        await windowManager.minimize(); //needed
+        // NuvDesk: restaura de forma explicita. O windowOnTop(null) so restaurava se
+        // stateGlobal.isMinimized ja tivesse sido atualizado pelo evento da janela -
+        // em PC lento ainda era false e a janela ficava minimizada/travada.
+        await windowManager.restore();
+        await windowManager.show();
+        await windowManager.focus();
+        windowOnTop(null);
+      }
+    } finally {
+      _cmShowInProgress = false;
     }
   }
 }
