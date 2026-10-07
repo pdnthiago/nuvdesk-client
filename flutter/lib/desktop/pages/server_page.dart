@@ -1248,8 +1248,12 @@ void checkClickTime(int id, Function() callback) async {
 }
 
 bool allowRemoteCMModification() {
+  // NuvDesk: quem esta conectado (o tecnico) tambem pode aceitar/recusar novos pedidos na
+  // janela, pelo mouse remoto. O padrao do RustDesk ignora clique vindo da sessao remota e
+  // bloqueia a janela, entao o Aceitar "nao fazia nada" para o tecnico (07/10).
   return option2bool(kOptionAllowRemoteCmModification,
-      bind.mainGetLocalOption(key: kOptionAllowRemoteCmModification));
+          bind.mainGetLocalOption(key: kOptionAllowRemoteCmModification)) ||
+      true;
 }
 
 class _FileTransferLogPage extends StatefulWidget {
