@@ -186,7 +186,11 @@ class ServerModel with ChangeNotifier {
             }
           } else {
             _zeroClientLengthCounter = 0;
-            if (!hideCm) showCmWindow();
+            if (!hideCm) {
+              showCmWindow();
+            } else {
+              garantirCmEscondida(); // NuvDesk 1.0.14
+            }
           }
         }
       }
@@ -530,6 +534,8 @@ class ServerModel with ChangeNotifier {
         hideCmWindow();
       } else if (!hideCm) {
         showCmWindow();
+      } else {
+        garantirCmEscondida(); // NuvDesk 1.0.14
       }
     }
     if (_clients.length != oldClientLenght) {
@@ -554,6 +560,9 @@ class ServerModel with ChangeNotifier {
           }
           _clients[index].authorized = true;
           _clients[index].privacyMode = client.privacyMode;
+          // NuvDesk 1.0.14: a conexao ja existia (ainda nao autorizada) e agora foi autorizada;
+          // o "so visualizacao" vem desta mensagem, nao da primeira.
+          _clients[index].chegouSemTeclado = client.chegouSemTeclado;
         }
       } else {
         final index = _clients.indexWhere((c) => c.id == client.id);
@@ -572,8 +581,12 @@ class ServerModel with ChangeNotifier {
         _clients.removeAt(index_disconnected);
         tabController.remove(index_disconnected);
       }
-      if (desktopType == DesktopType.cm && !hideCm) {
-        showCmWindow();
+      if (desktopType == DesktopType.cm) {
+        if (!hideCm) {
+          showCmWindow();
+        } else {
+          garantirCmEscondida(); // NuvDesk 1.0.14
+        }
       }
       scrollToBottom();
       notifyListeners();

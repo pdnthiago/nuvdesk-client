@@ -332,9 +332,14 @@ showCmWindow({bool isStartup = false}) async {
         kConnectionManagerWindowSizeClosedChat, Alignment.center);
     _isCmReadyToShow = true;
   } else if (_isCmReadyToShow && !_cmShowInProgress) {
+    // NuvDesk 1.0.14: visualizacao em segundo plano nao pode piscar nada no cliente. A regra
+    // pode ter virado "esconder" entre a chamada e agora (a conexao chega e e classificada
+    // em passos); o primeiro restore() de uma janela oculta ja a mostra, entao confere antes.
+    if (gFFI.serverModel.hideCm) return;
     _cmShowInProgress = true;
     try {
       if (await windowManager.getOpacity() != 1) {
+        await windowManager.setSkipTaskbar(false);
         // NuvDesk: a janela chega aqui MINIMIZADA e escondida (hideCmWindow). O
         // setSizeAlignment rodava depois do minimize - e reposicionar janela
         // minimizada nao pega no Windows (so move o icone). Ao restaurar, ela
@@ -350,6 +355,14 @@ showCmWindow({bool isStartup = false}) async {
         await windowManager.show();
         await windowManager.focus();
         await windowManager.minimize(); //needed
+        // NuvDesk 1.0.14: a sequencia leva segundos em PC lento; se a regra virou "esconder"
+        // durante ela, desfaz em vez de restaurar a janela no fim.
+        if (gFFI.serverModel.hideCm) {
+          await windowManager.setSkipTaskbar(true);
+          await windowManager.setOpacity(0);
+          await windowManager.hide();
+          return;
+        }
         // NuvDesk: restaura de forma explicita. O windowOnTop(null) so restaurava se
         // stateGlobal.isMinimized ja tivesse sido atualizado pelo evento da janela -
         // em PC lento ainda era false e a janela ficava minimizada/travada.
@@ -362,6 +375,22 @@ showCmWindow({bool isStartup = false}) async {
       _cmShowInProgress = false;
     }
   }
+}
+
+/// NuvDesk 1.0.14: garante a janela do gerenciador de conexoes oculta e SEM botao na barra de
+/// tarefas. Chamada de novo a cada ciclo enquanto so houver conexoes que nao mostram janela
+/// (visualizacao de tela, arquivos, terminal). Antes, se a janela chegasse a aparecer (corrida
+/// de tempo vista no DELL PRATA em 10/10: ficou 90 s na frente), nada a escondia de novo
+/// enquanto houvesse conexao - o hideCmWindow so rodava com a lista vazia. Nao depende da
+/// opacidade: confere se a janela esta de fato visivel.
+garantirCmEscondida() async {
+  if (!_isCmReadyToShow || _cmShowInProgress) return;
+  if (!await windowManager.isVisible()) return;
+  await windowManager.setSkipTaskbar(true);
+  await windowManager.setOpacity(0);
+  bind.mainHideDock();
+  await windowManager.minimize();
+  await windowManager.hide();
 }
 
 hideCmWindow({bool isStartup = false}) async {
