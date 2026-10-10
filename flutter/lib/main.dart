@@ -400,6 +400,11 @@ hideCmWindow({bool isStartup = false}) async {
     windowManager.setOpacity(0);
     await windowManager.waitUntilReadyToShow(windowOptions, null);
     bind.mainHideDock();
+    // NuvDesk 1.0.15: o waitUntilReadyToShow acima aplica skipTaskbar:false, e o minimize() de uma
+    // janela que ja nasceu oculta a torna visivel por ~0,4 s - o botao piscava na barra de
+    // tarefas do cliente no inicio de cada visualizacao. Sem botao ANTES de minimizar, nao pisca.
+    // O showCmWindow devolve o botao (setSkipTaskbar(false)) quando for mostrar a janela de verdade.
+    await windowManager.setSkipTaskbar(true);
     await windowManager.minimize();
     await windowManager.hide();
     _isCmReadyToShow = true;
@@ -407,6 +412,7 @@ hideCmWindow({bool isStartup = false}) async {
     if (await windowManager.getOpacity() != 0) {
       await windowManager.setOpacity(0);
       bind.mainHideDock();
+      await windowManager.setSkipTaskbar(true);
       await windowManager.minimize();
       await windowManager.hide();
     }
